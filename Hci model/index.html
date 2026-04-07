@@ -1,0 +1,754 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Adaptive Tutor Chat</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: Arial, Helvetica, sans-serif;
+      background: #f4f7fb;
+      color: #1f2937;
+    }
+
+    .app {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 24px;
+      display: grid;
+      grid-template-columns: 320px 1fr;
+      gap: 20px;
+      min-height: 100vh;
+    }
+
+    .panel,
+    .chat-panel {
+      background: #ffffff;
+      border-radius: 16px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+    }
+
+    .panel {
+      padding: 20px;
+      align-self: start;
+    }
+
+    .panel h2,
+    .chat-header h1 {
+      margin-top: 0;
+    }
+
+    .section {
+      margin-bottom: 20px;
+    }
+
+    .label {
+      display: block;
+      font-size: 14px;
+      margin-bottom: 8px;
+      font-weight: 600;
+      color: #374151;
+    }
+
+    input[type="text"],
+    select,
+    textarea {
+      width: 100%;
+      padding: 12px 14px;
+      border: 1px solid #d1d5db;
+      border-radius: 10px;
+      font-size: 14px;
+      outline: none;
+      background: #fff;
+    }
+
+    textarea {
+      resize: none;
+      min-height: 90px;
+      line-height: 1.5;
+    }
+
+    input[type="checkbox"] {
+      transform: scale(1.1);
+      margin-right: 8px;
+    }
+
+    .small-text {
+      font-size: 13px;
+      color: #6b7280;
+      line-height: 1.5;
+    }
+
+    .row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .button-group {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    button {
+      border: none;
+      border-radius: 10px;
+      padding: 12px 16px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: 0.2s ease;
+    }
+
+    button.primary {
+      background: #2563eb;
+      color: white;
+    }
+
+    button.primary:hover {
+      background: #1d4ed8;
+    }
+
+    button.secondary {
+      background: #e5e7eb;
+      color: #111827;
+    }
+
+    button.secondary:hover {
+      background: #d1d5db;
+    }
+
+    button:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    .chat-panel {
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      min-height: 85vh;
+    }
+
+    .chat-header {
+      padding: 20px 24px;
+      border-bottom: 1px solid #e5e7eb;
+      background: linear-gradient(135deg, #eff6ff, #f8fafc);
+    }
+
+    .chat-header h1 {
+      font-size: 24px;
+      margin-bottom: 8px;
+    }
+
+    .chat-header p {
+      margin: 0;
+      color: #6b7280;
+      font-size: 14px;
+    }
+
+    .status-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 6px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+      background: #eef2ff;
+      color: #3730a3;
+    }
+
+    .badge.teacher {
+      background: #dbeafe;
+      color: #1d4ed8;
+    }
+
+    .badge.friend {
+      background: #dcfce7;
+      color: #15803d;
+    }
+
+    .badge.neutral {
+      background: #f3f4f6;
+      color: #374151;
+    }
+
+    .messages {
+      flex: 1;
+      padding: 24px;
+      overflow-y: auto;
+      background: #f9fafb;
+    }
+
+    .message {
+      display: flex;
+      margin-bottom: 18px;
+    }
+
+    .message.user {
+      justify-content: flex-end;
+    }
+
+    .bubble {
+      max-width: 75%;
+      padding: 14px 16px;
+      border-radius: 16px;
+      line-height: 1.6;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+      font-size: 15px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    }
+
+    .message.user .bubble {
+      background: #2563eb;
+      color: white;
+      border-bottom-right-radius: 6px;
+    }
+
+    .message.assistant .bubble {
+      background: white;
+      color: #111827;
+      border: 1px solid #e5e7eb;
+      border-bottom-left-radius: 6px;
+    }
+
+    .message.error .bubble {
+      background: #fff1f2;
+      color: #9f1239;
+      border: 1px solid #fecdd3;
+      border-bottom-left-radius: 6px;
+    }
+
+    .meta {
+      margin-top: 8px;
+      font-size: 12px;
+      color: #6b7280;
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .composer {
+      border-top: 1px solid #e5e7eb;
+      padding: 18px 24px;
+      background: white;
+    }
+
+    .composer-grid {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 12px;
+      align-items: end;
+    }
+
+    .loading {
+      font-size: 14px;
+      color: #6b7280;
+      margin-top: 8px;
+      min-height: 20px;
+    }
+
+    .empty-state {
+      text-align: center;
+      color: #6b7280;
+      margin-top: 80px;
+      font-size: 15px;
+    }
+
+    .debug-box {
+      background: #f8fafc;
+      border: 1px solid #e5e7eb;
+      border-radius: 12px;
+      padding: 12px;
+      font-size: 13px;
+      color: #374151;
+      line-height: 1.8;
+    }
+
+    @media (max-width: 900px) {
+      .app {
+        grid-template-columns: 1fr;
+      }
+
+      .chat-panel {
+        min-height: 70vh;
+      }
+
+      .bubble {
+        max-width: 88%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside class="panel">
+      <h2>Settings</h2>
+
+      <div class="section">
+        <label class="label" for="backendUrl">Backend URL</label>
+        <input
+          id="backendUrl"
+          type="text"
+          value="http://127.0.0.1:8000"
+        />
+        <p class="small-text">Use your FastAPI server address here.</p>
+      </div>
+
+      <div class="section">
+        <label class="label" for="modeSelect">Interaction Mode</label>
+        <select id="modeSelect">
+          <option value="adaptive">Adaptive</option>
+          <option value="teacher">Teacher</option>
+          <option value="friend">Friend</option>
+        </select>
+      </div>
+
+      <div class="section">
+        <label class="label" for="sessionId">Session ID</label>
+        <input id="sessionId" type="text" />
+        <p class="small-text">This is saved locally so one chat can continue across refreshes.</p>
+      </div>
+
+      <div class="section row">
+        <input id="webSearchToggle" type="checkbox" />
+        <label for="webSearchToggle" style="font-size:14px;">Enable web search tool</label>
+      </div>
+
+      <div class="section row">
+        <input id="debugToggle" type="checkbox" checked />
+        <label for="debugToggle" style="font-size:14px;">Show debug information</label>
+      </div>
+
+      <div class="section">
+        <div class="button-group">
+          <button class="secondary" id="newSessionBtn">New Session</button>
+          <button class="secondary" id="clearChatBtn">Clear Chat</button>
+        </div>
+      </div>
+
+      <div class="section">
+        <label class="label">Current Status</label>
+        <div class="debug-box">
+          <div><strong>Current mode:</strong> <span id="currentModeText">-</span></div>
+          <div><strong>Last role:</strong> <span id="lastRole">-</span></div>
+          <div><strong>Last detected state:</strong> <span id="lastState">-</span></div>
+          <div><strong>Last switch:</strong> <span id="lastSwitch">-</span></div>
+        </div>
+      </div>
+
+      <div class="section">
+        <label class="label">Prototype Note</label>
+        <p class="small-text">
+          This interface sends each user turn to the backend, which decides whether the system should respond as a teacher or a friend.
+        </p>
+      </div>
+    </aside>
+
+    <main class="chat-panel">
+      <div class="chat-header">
+        <h1>Adaptive Tutor Chat</h1>
+        <p>
+          A simple prototype for teacher / friend / adaptive interaction.
+        </p>
+        <div class="status-bar">
+          <span class="badge neutral" id="modeBadge">Mode: adaptive</span>
+          <span class="badge neutral" id="sessionBadge">Session: -</span>
+        </div>
+      </div>
+
+      <div class="messages" id="messages">
+        <div class="empty-state" id="emptyState">
+          Start the conversation by typing a message below.
+        </div>
+      </div>
+
+      <div class="composer">
+        <div class="composer-grid">
+          <div>
+            <label class="label" for="userInput">Your message</label>
+            <textarea
+              id="userInput"
+              placeholder="Type your message here..."
+            ></textarea>
+            <div class="loading" id="loadingText"></div>
+          </div>
+          <div>
+            <button class="primary" id="sendBtn">Send</button>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    const backendUrlInput = document.getElementById("backendUrl");
+    const modeSelect = document.getElementById("modeSelect");
+    const sessionIdInput = document.getElementById("sessionId");
+    const webSearchToggle = document.getElementById("webSearchToggle");
+    const debugToggle = document.getElementById("debugToggle");
+
+    const newSessionBtn = document.getElementById("newSessionBtn");
+    const clearChatBtn = document.getElementById("clearChatBtn");
+    const sendBtn = document.getElementById("sendBtn");
+
+    const messagesEl = document.getElementById("messages");
+    const emptyStateEl = document.getElementById("emptyState");
+    const userInputEl = document.getElementById("userInput");
+    const loadingTextEl = document.getElementById("loadingText");
+
+    const modeBadge = document.getElementById("modeBadge");
+    const sessionBadge = document.getElementById("sessionBadge");
+
+    const currentModeTextEl = document.getElementById("currentModeText");
+    const lastRoleEl = document.getElementById("lastRole");
+    const lastStateEl = document.getElementById("lastState");
+    const lastSwitchEl = document.getElementById("lastSwitch");
+
+    const STORAGE_KEYS = {
+      sessionId: "adaptiveTutorSessionId",
+      chatHistory: "adaptiveTutorChatHistory",
+      backendUrl: "adaptiveTutorBackendUrl",
+      mode: "adaptiveTutorMode",
+      webSearch: "adaptiveTutorWebSearch",
+      debug: "adaptiveTutorDebug"
+    };
+
+    let uiMessages = [];
+    let apiHistory = [];
+
+    function generateSessionId() {
+      return "session-" + Date.now() + "-" + Math.random().toString(36).slice(2, 8);
+    }
+
+    function saveState() {
+      localStorage.setItem(STORAGE_KEYS.sessionId, sessionIdInput.value);
+      localStorage.setItem(STORAGE_KEYS.chatHistory, JSON.stringify(uiMessages));
+      localStorage.setItem(STORAGE_KEYS.backendUrl, backendUrlInput.value);
+      localStorage.setItem(STORAGE_KEYS.mode, modeSelect.value);
+      localStorage.setItem(STORAGE_KEYS.webSearch, String(webSearchToggle.checked));
+      localStorage.setItem(STORAGE_KEYS.debug, String(debugToggle.checked));
+    }
+
+    function rebuildApiHistoryFromUiMessages() {
+      apiHistory = [];
+      for (const msg of uiMessages) {
+        if (msg.role === "user" || msg.role === "assistant") {
+          apiHistory.push({
+            role: msg.role,
+            content: msg.content
+          });
+        }
+      }
+    }
+
+    function loadState() {
+      const savedSessionId = localStorage.getItem(STORAGE_KEYS.sessionId);
+      const savedChatHistory = localStorage.getItem(STORAGE_KEYS.chatHistory);
+      const savedBackendUrl = localStorage.getItem(STORAGE_KEYS.backendUrl);
+      const savedMode = localStorage.getItem(STORAGE_KEYS.mode);
+      const savedWebSearch = localStorage.getItem(STORAGE_KEYS.webSearch);
+      const savedDebug = localStorage.getItem(STORAGE_KEYS.debug);
+
+      sessionIdInput.value = savedSessionId || generateSessionId();
+      backendUrlInput.value = savedBackendUrl || "http://127.0.0.1:8000";
+      modeSelect.value = savedMode || "adaptive";
+      webSearchToggle.checked = savedWebSearch === "true";
+      debugToggle.checked = savedDebug !== "false";
+
+      if (savedChatHistory) {
+        try {
+          uiMessages = JSON.parse(savedChatHistory);
+          rebuildApiHistoryFromUiMessages();
+        } catch (e) {
+          uiMessages = [];
+          apiHistory = [];
+        }
+      }
+
+      updateHeader();
+      renderMessages();
+    }
+
+    function updateHeader() {
+      modeBadge.textContent = `Mode: ${modeSelect.value}`;
+      sessionBadge.textContent = `Session: ${sessionIdInput.value}`;
+      currentModeTextEl.textContent = modeSelect.value;
+
+      modeBadge.className = "badge";
+      if (modeSelect.value === "teacher") {
+        modeBadge.classList.add("teacher");
+      } else if (modeSelect.value === "friend") {
+        modeBadge.classList.add("friend");
+      } else {
+        modeBadge.classList.add("neutral");
+      }
+    }
+
+    function formatTime(date) {
+      return new Date(date).toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit"
+      });
+    }
+
+    function createMetaHtml(msg) {
+      const metaParts = [];
+
+      if (msg.time) {
+        metaParts.push(`<span>${formatTime(msg.time)}</span>`);
+      }
+
+      if (msg.selected_role) {
+        metaParts.push(`<span>role: ${msg.selected_role}</span>`);
+      }
+
+      if (msg.detected_state) {
+        metaParts.push(`<span>state: ${msg.detected_state}</span>`);
+      }
+
+      if (typeof msg.switched === "boolean") {
+        metaParts.push(`<span>switched: ${msg.switched}</span>`);
+      }
+
+      return metaParts.length
+        ? `<div class="meta">${metaParts.join("")}</div>`
+        : "";
+    }
+
+    function escapeHtml(text) {
+      return text
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    function updateCurrentStatusFromMessages() {
+      const assistantMessages = uiMessages.filter(
+        msg => msg.role === "assistant"
+      );
+
+      if (!assistantMessages.length) {
+        lastRoleEl.textContent = "-";
+        lastStateEl.textContent = "-";
+        lastSwitchEl.textContent = "-";
+        return;
+      }
+
+      const lastAssistant = assistantMessages[assistantMessages.length - 1];
+
+      lastRoleEl.textContent = lastAssistant.selected_role || "-";
+      lastStateEl.textContent = lastAssistant.detected_state || "-";
+      lastSwitchEl.textContent =
+        typeof lastAssistant.switched === "boolean"
+          ? String(lastAssistant.switched)
+          : "-";
+    }
+
+    function renderMessages() {
+      messagesEl.innerHTML = "";
+
+      if (!uiMessages.length) {
+        messagesEl.appendChild(emptyStateEl);
+        emptyStateEl.style.display = "block";
+        updateCurrentStatusFromMessages();
+        return;
+      }
+
+      emptyStateEl.style.display = "none";
+
+      uiMessages.forEach((msg) => {
+        const wrapper = document.createElement("div");
+        wrapper.className = `message ${msg.role}`;
+
+        const bubble = document.createElement("div");
+        bubble.className = "bubble";
+
+        let html = `<div>${escapeHtml(msg.content)}</div>`;
+
+        if (debugToggle.checked && (msg.role === "assistant" || msg.role === "error")) {
+          html += createMetaHtml(msg);
+        }
+
+        bubble.innerHTML = html;
+        wrapper.appendChild(bubble);
+        messagesEl.appendChild(wrapper);
+      });
+
+      messagesEl.scrollTop = messagesEl.scrollHeight;
+      updateCurrentStatusFromMessages();
+    }
+
+    function setLoading(isLoading, text = "") {
+      sendBtn.disabled = isLoading;
+      userInputEl.disabled = isLoading;
+      loadingTextEl.textContent = text;
+    }
+
+    function addUserMessage(text) {
+      const message = {
+        role: "user",
+        content: text,
+        time: new Date().toISOString()
+      };
+
+      uiMessages.push(message);
+      apiHistory.push({
+        role: "user",
+        content: text
+      });
+
+      saveState();
+      renderMessages();
+    }
+
+    function addAssistantMessage(data) {
+      const message = {
+        role: "assistant",
+        content: data.assistant_reply,
+        selected_role: data.selected_role,
+        detected_state: data.detected_state,
+        switched: data.switched,
+        time: new Date().toISOString()
+      };
+
+      uiMessages.push(message);
+      apiHistory.push({
+        role: "assistant",
+        content: data.assistant_reply
+      });
+
+      saveState();
+      renderMessages();
+    }
+
+    function addErrorMessage(errorMessage) {
+      const message = {
+        role: "error",
+        content: `Error: ${errorMessage}`,
+        selected_role: "system",
+        detected_state: "error",
+        switched: false,
+        time: new Date().toISOString()
+      };
+
+      uiMessages.push(message);
+      saveState();
+      renderMessages();
+    }
+
+    async function sendMessage() {
+      const userText = userInputEl.value.trim();
+      if (!userText) return;
+
+      const backendUrl = backendUrlInput.value.trim().replace(/\/$/, "");
+      const sessionId = sessionIdInput.value.trim();
+
+      updateHeader();
+
+      addUserMessage(userText);
+      userInputEl.value = "";
+
+      setLoading(true, "Assistant is thinking...");
+
+      const payload = {
+        session_id: sessionId,
+        user_input: userText,
+        history: apiHistory.slice(0, -1),
+        response_time_seconds: 8,
+        fixed_mode: modeSelect.value,
+        use_web_search: webSearchToggle.checked
+      };
+
+      try {
+        const res = await fetch(`${backendUrl}/chat`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify(payload)
+        });
+
+        if (!res.ok) {
+          const errorText = await res.text();
+          throw new Error(`Request failed: ${res.status} ${errorText}`);
+        }
+
+        const data = await res.json();
+        addAssistantMessage(data);
+      } catch (error) {
+        addErrorMessage(error.message);
+      } finally {
+        setLoading(false, "");
+      }
+    }
+
+    function startNewSession() {
+      sessionIdInput.value = generateSessionId();
+      uiMessages = [];
+      apiHistory = [];
+      updateHeader();
+      saveState();
+      renderMessages();
+    }
+
+    function clearChat() {
+      uiMessages = [];
+      apiHistory = [];
+      updateHeader();
+      saveState();
+      renderMessages();
+    }
+
+    sendBtn.addEventListener("click", sendMessage);
+
+    userInputEl.addEventListener("keydown", (event) => {
+      if (event.key === "Enter" && !event.shiftKey) {
+        event.preventDefault();
+        sendMessage();
+      }
+    });
+
+    newSessionBtn.addEventListener("click", startNewSession);
+    clearChatBtn.addEventListener("click", clearChat);
+
+    modeSelect.addEventListener("change", () => {
+      updateHeader();
+      saveState();
+      renderMessages();
+    });
+
+    backendUrlInput.addEventListener("change", saveState);
+
+    sessionIdInput.addEventListener("change", () => {
+      updateHeader();
+      saveState();
+    });
+
+    webSearchToggle.addEventListener("change", saveState);
+
+    debugToggle.addEventListener("change", () => {
+      saveState();
+      renderMessages();
+    });
+
+    loadState();
+  </script>
+</body>
+</html>
